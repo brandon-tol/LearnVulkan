@@ -9,10 +9,10 @@
 #include <optional>
 #include <set>
 
-const uint32_t WIDTH = 800;
-const uint32_t HEIGHT = 600;
+static const uint32_t WIDTH = 800;
+static const uint32_t HEIGHT = 600;
 
-const std::vector<const char*> validationLayers
+static const std::vector<const char*> validationLayers
 {
 	"VK_LAYER_KHRONOS_validation"
 };
@@ -23,13 +23,13 @@ const bool enableValidationLayers = false;
 const bool enableValidationLayers = true;
 #endif
 
-const std::vector<const char*> deviceExtensions
+static const std::vector<const char*> deviceExtensions
 {
 	VK_KHR_SWAPCHAIN_EXTENSION_NAME
 };
 
 
-VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, 
+static VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, 
 	const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, 
 	const VkAllocationCallbacks* pAllocator, 
 	VkDebugUtilsMessengerEXT* pDebugMessenger)
@@ -46,7 +46,7 @@ VkResult CreateDebugUtilsMessengerEXT(VkInstance instance,
 	}
 }
 
-void DestroyDebugUtilsMessengerEXT(VkInstance instance, 
+static void DestroyDebugUtilsMessengerEXT(VkInstance instance, 
 	VkDebugUtilsMessengerEXT debugMessenger, 
 	const VkAllocationCallbacks* pAllocator)
 {
@@ -60,7 +60,7 @@ void DestroyDebugUtilsMessengerEXT(VkInstance instance,
 
 struct SwapChainSupportDetails
 {
-	VkSurfaceCapabilitiesKHR capabilities;
+	VkSurfaceCapabilitiesKHR capabilities{};
 	std::vector<VkSurfaceFormatKHR> formats;
 	std::vector<VkPresentModeKHR> presentModes;
 };
@@ -189,8 +189,15 @@ private:
 	{
 		QueueFamilyIndices indices = findQueueFamilies(device);
 		bool extensionsSupported = checkDeviceExtensionSupport(device);
-		
-		return indices.isComplete() && extensionsSupported;
+		bool swapChainAdequate = false;
+		if (extensionsSupported)
+		{
+			auto swapChainSupport = querySwapChainSupport(device);
+			swapChainAdequate = !swapChainSupport.formats.empty() &&
+				!swapChainSupport.presentModes.empty();
+		}
+
+		return indices.isComplete() && extensionsSupported && swapChainAdequate;
 	}
 
 	bool checkDeviceExtensionSupport(VkPhysicalDevice device)
@@ -211,7 +218,7 @@ private:
 		return requiredExtensions.empty();
 	}
 
-	QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device)
+	QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device) const
 	{
 		QueueFamilyIndices indices;
 
@@ -245,17 +252,27 @@ private:
 		return indices;
 	}
 
-	SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device)
+	SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device) const
 	{
 		SwapChainSupportDetails details;
 		vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &details.capabilities);
 
 		uint32_t formatCount;
 		vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, nullptr);
-		if (formatCount != 0)
+		if (formatCount > 0)
 		{
 			details.formats.resize(formatCount);
-			vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, details.formats.data());
+			vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, 
+				details.formats.data());
+		}
+
+		uint32_t presentModeCount;
+		vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, nullptr);
+		if (presentModeCount > 0)
+		{
+			details.presentModes.resize(presentModeCount);
+			vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount,
+				details.presentModes.data());
 		}
 
 		return details;
@@ -430,14 +447,14 @@ private:
 	}
 
 private:
-	GLFWwindow* window;
-	VkInstance instance;
-	VkDebugUtilsMessengerEXT debugMessenger;
+	GLFWwindow* window = nullptr;
+	VkInstance instance = VK_NULL_HANDLE;
+	VkDebugUtilsMessengerEXT debugMessenger = VK_NULL_HANDLE;
 	VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
-	VkDevice device;
-	VkQueue graphicsQueue;
-	VkQueue presentQueue;
-	VkSurfaceKHR surface;
+	VkDevice device = VK_NULL_HANDLE;
+	VkQueue graphicsQueue = VK_NULL_HANDLE;
+	VkQueue presentQueue = VK_NULL_HANDLE;
+	VkSurfaceKHR surface = VK_NULL_HANDLE;
 };
 
 int main()
